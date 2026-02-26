@@ -22,12 +22,12 @@ while cap.isOpened():
             mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
             
             # This is where you'd extract the (x,y,z) for your AI model
-            # for lm in hand_landmarks.landmark:
-            #    print(lm.x, lm.y, lm.z)
+            for lm in hand_landmarks.landmark:
+                print(lm.x, lm.y, lm.z)
 
     cv2.imshow("Sign Language Tracker", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
+    
 cap.release()
 cv2.destroyAllWindows()
