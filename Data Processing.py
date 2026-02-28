@@ -1,42 +1,53 @@
 import os
-import pandas as pd
 import cv2
 import mediapipe as mp
+import pandas as pd
 
-#mediapipe hands initialization
+# Initialize MediaPipe
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.5)
-mp_draw = mp.solutions.drawing_utils
 
-Dataset=' Folder path '
-data=[]
-label=[]
+DATA_DIR = r"C:\Users\User\Desktop\ASL Data\Train" 
+data = []
+labels = []
 
-for directories in os.listdir(Dataset):
-    if not os.path.isdir(os.path.join(Dataset, directories)):
+for dir_ in os.listdir(DATA_DIR):
+    folder_path = os.path.join(DATA_DIR, dir_)
+    if not os.path.isdir(folder_path):
         continue
-
-    print("Processing Letter:, {directories}")
-
-    for image_path in os.listdir(os.path.join(Dataset, directories)):
         
-        data_aux = []
-        image=cv2.imread(os.path.join(Dataset, directories, image_path))
-        image_rgb=cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results= hands.process(image_rgb)
-        
+    print(f"Processing Letter: {dir_}")
+    
+    for img_path in os.listdir(folder_path):
+        if not img_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+            continue
+
+        img = cv2.imread(os.path.join(folder_path, img_path))
+        if img is None: continue
+
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        results = hands.process(img_rgb)
+
         if results.multi_hand_landmarks:
+            # We focus on the first hand detected
+            hand_landmarks = results.multi_hand_landmarks[0]
+            data_aux = []
             
-            x = hand_landmarks.landmark[i].x
-            y = hand_landmarks.landmark[i].y
-            data_aux.append(x)
-            data_aux.append(y)
+            # WRIST-CENTRIC NORMALIZATION
+            wrist_x = hand_landmarks.landmark[0].x
+            wrist_y = hand_landmarks.landmark[0].y
 
-        data.append(data_aux)
-        label.append(directories)
+            for i in range(21):
+                # Store coordinates as distance from wrist
+                data_aux.append(hand_landmarks.landmark[i].x - wrist_x)
+                data_aux.append(hand_landmarks.landmark[i].y - wrist_y)
+            
+            if len(data_aux) == 42:
+                data.append(data_aux)
+                labels.append(dir_)
 
-
-df= pd.DataFrame(data)
-df['label']= label
-df.to_csv('hand_landmarks_data.csv', index= False)
-print("Data Extraction Complete")
+# Save to CSV
+df = pd.DataFrame(data)
+df['label'] = labels
+df.to_csv('hand_landmarks_data.csv', index=False)
+print(" Data extraction complete! Landmarks saved to hand_landmarks_data.csv")
